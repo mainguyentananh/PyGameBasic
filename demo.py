@@ -8,24 +8,37 @@ pygame.mixer.pre_init(44100,-16,2,512)
 mixer.init()
 pygame.init()
 
-#variable state
+#define map
 num = 1
 max_num = 3
-game_over = 0
 
-screen_width = 800
-screen_height = 600
+#define door and state game
+game_over = 0
+oDoor = 0
+
+#define menu
+main_menu = True
 
 #FPS
 fpsclock = pygame.time.Clock()
 FPS = 60
 
+#Config 
+screen_width = 800
+screen_height = 600
 screen = pygame.display.set_mode((screen_width,screen_height))
 pygame.display.set_caption("Demo Game")
+pygame.mixer.music.load('sound/start.mp3')
+pygame.mixer.music.play(-1,0,5000)
+
 
 #load images
 bGround1 = pygame.image.load("image/bg1.png")
 bGround2 = pygame.image.load("image/bg2.png")
+bGround3 = pygame.image.load("image/bg3.png")
+start = pygame.image.load("image/start.png")
+restart = pygame.image.load("image/restart.png")
+
 
 #load sound
 sJump = pygame.mixer.Sound("sound/jump.wav")
@@ -34,11 +47,17 @@ sJump.set_volume(0.5)
 sCoin = pygame.mixer.Sound("sound/coin.wav")
 sCoin.set_volume(0.5)
 
+sDead = pygame.mixer.Sound("sound/Dead.wav")
+sDead.set_volume(0.5)
+
+sNext = pygame.mixer.Sound("sound/next_map.wav")
+sNext.set_volume(0.5)
+
 tile_size = 40
 
 
 def next_map(num):
-	player.reset(tile_size*2, screen_height-(tile_size*4))
+	player.reset(tile_size, screen_height-(tile_size*4))
 	key_grp.empty()
 	door_grp.empty()
 	lava_grp.empty()
@@ -58,7 +77,7 @@ def draw_layout():
 		pygame.draw.line(screen,(255,255,255),(0,line * tile_size),(screen_width,line * tile_size))
 		pygame.draw.line(screen,(255,255,255),(line * tile_size,0),(line * tile_size,screen_height))
 
-#draw land
+#draw world
 class World():
 	def __init__(self,data):
 		self.tile_list = []
@@ -157,6 +176,12 @@ class Player():
 		self.check_jump = 0
 		
 
+	def oDoor(self,oDoor):
+		if pygame.sprite.spritecollide(self,key_grp,True):
+			oDoor += 1
+			sCoin.play()
+		return oDoor
+
 	def update(self,game_over):
 		dx = 0  
 		dy = 0
@@ -222,9 +247,7 @@ class Player():
 
 
 		#check for collision
-	
 		for tile in world.tile_list:
-
 			#check x 
 			if tile[1].colliderect(self.rect.x + dx,self.rect.y,self.width,self.height):
 				dx = 0 #Khong di xuyen qua
@@ -241,17 +264,25 @@ class Player():
 				#Khi nào có va chạm xong chạm vật mới tiếp tục nhảy tiếp
 				self.check_jump = 0
 
-		
-		if pygame.sprite.spritecollide(self,key_grp,True):
-			sCoin.play()
-			
+
 		#check for collision with exit
-		if pygame.sprite.spritecollide(self, door_grp, False):
-			game_over = 1
+		# Show Door and Next Map
+		if oDoor >=3:
+			if pygame.sprite.spritecollide(self, door_grp, False):
+				game_over = 1
+				sNext.play()
+
+		if pygame.sprite.spritecollide(self,lava_grp,False):
+			game_over = -1
+			sDead.play()
+
 
 		#update player
 		self.rect.x += dx				
 		self.rect.y += dy
+
+		if game_over == -1:
+			self.rect.y = -200
 
 		# print(dy)
 		# print(self.rect.top)
@@ -297,33 +328,84 @@ class Player():
 #instance player
 player = Player(tile_size*2,screen_height-(tile_size*4))
 
+	
+class Button():
+	def __init__(self, x, y, image):
+		self.image = pygame.transform.scale(image,(120,80))
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+		self.clicked = False
 
+	def draw(self):
+		action = False
+
+		#get mouse position
+		pos = pygame.mouse.get_pos()
+
+		#check mouseover and clicked conditions
+		if self.rect.collidepoint(pos):
+			if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+				action = True
+				self.clicked = True
+
+		if pygame.mouse.get_pressed()[0] == 0:
+			self.clicked = False
+
+
+		#draw button
+		screen.blit(self.image, self.rect)
+
+		return action
+
+start_button = Button((screen_width / 2) - 40, (screen_height / 2) - 120, start)
+restart_button = Button((screen_width / 2) - 40, (screen_height / 2) - 120, restart)
 
 #Main
 run = True
 while run:
 	fpsclock.tick(FPS)
-	#draw_layout()
-	#pygame.draw.line(screen,(0,0,0),(0,520),(800,520))
 
 	if num == 1:
 		screen.blit(bGround1,(0,0))
 	if num ==2:
 		screen.blit(bGround2,(0,0))
+	if num ==3:
+		screen.blit(bGround3,(0,0))
 	
 	world.drawWorld()
-	game_over = player.update(game_over)
-	door_grp.draw(screen)
-	key_grp.draw(screen)
-	lava_grp.draw(screen)
-	
 
-	if game_over == 1:
-		num += 1
-		if num <= max_num:
-			world = next_map(num)
-			game_over = 0
+	if main_menu == True:
+		if start_button.draw():
+			main_menu = False
+			pygame.mixer.music.stop()
 
+	else:
+		game_over = player.update(game_over)
+		oDoor = player.oDoor(oDoor)
+		
+		#Show Door
+		if oDoor >=3:		
+			door_grp.draw(screen)
+		key_grp.draw(screen)
+		lava_grp.draw(screen)
+		
+		if game_over == -1:
+			if restart_button.draw():
+				num = 1
+				world = next_map(num)
+				game_over = 0
+				oDoor = 0
+
+		if game_over == 1:
+			num += 1
+			if num <= max_num:
+				world = next_map(num)
+				game_over = 0
+			oDoor = 0
+
+	#draw_layout()
+	#pygame.draw.line(screen,(0,0,0),(0,520),(800,520))
 	
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
@@ -333,4 +415,3 @@ while run:
 
 pygame.quit()
 
-# load map là vấn đề gặp phải
