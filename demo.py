@@ -1,7 +1,17 @@
 import pygame
 from pygame.locals import *
+from pygame import mixer
+import pickle
+from os import path
 
+pygame.mixer.pre_init(44100,-16,2,512)
+mixer.init()
 pygame.init()
+
+#variable state
+num = 1
+max_num = 3
+game_over = 0
 
 screen_width = 800
 screen_height = 600
@@ -15,9 +25,32 @@ pygame.display.set_caption("Demo Game")
 
 #load images
 bGround1 = pygame.image.load("image/bg1.png")
+bGround2 = pygame.image.load("image/bg2.png")
 
+#load sound
+sJump = pygame.mixer.Sound("sound/jump.wav")
+sJump.set_volume(0.5)
+
+sCoin = pygame.mixer.Sound("sound/coin.wav")
+sCoin.set_volume(0.5)
 
 tile_size = 40
+
+
+def next_map(num):
+	player.reset(tile_size*2, screen_height-(tile_size*4))
+	key_grp.empty()
+	door_grp.empty()
+	lava_grp.empty()
+
+	#load in level data and create world
+	if path.exists(f'map{num}.pickle'):
+		pickle_in = open(f'map{num}.pickle', 'rb')
+		world_data = pickle.load(pickle_in)
+	world = World(world_data)
+
+	return world
+
 
 #layout
 def draw_layout():
@@ -29,11 +62,8 @@ def draw_layout():
 class World():
 	def __init__(self,data):
 		self.tile_list = []
-
 		#load images
 		woodBlock = pygame.image.load("image/woodBlock.png")
-		key = pygame.image.load("image/key.png")
-
 		row_count = 0
 		for row in data:
 			col_count = 0
@@ -45,7 +75,15 @@ class World():
 					img_rect.y = row_count * tile_size
 					tile = (img, img_rect)
 					self.tile_list.append(tile)
-
+				if tile == 2:
+					key = Key(col_count * tile_size,row_count * tile_size)
+					key_grp.add(key)
+				if tile == 3:
+					door = Door(col_count * tile_size,row_count * tile_size)
+					door_grp.add(door)
+				if tile == 4:
+					lava = Lava(col_count * tile_size,row_count * tile_size)
+					lava_grp.add(lava)
 				col_count+=1
 			row_count+=1
 
@@ -54,31 +92,43 @@ class World():
 			screen.blit(tile[0] ,tile[1])
 
 
-world_data = [
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0],
-[0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-]
+class Door(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		img = pygame.image.load("image/door.png")
+		self.image = pygame.transform.scale(img,(55,90))
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+
+class Key(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		img = pygame.image.load("image/key.png")
+		self.image = pygame.transform.scale(img,(30,30))
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+
+class Lava(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		img = pygame.image.load('image/lava.png')
+		self.image = pygame.transform.scale(img, (40,40))
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+
+door_grp = pygame.sprite.Group()
+key_grp = pygame.sprite.Group()
+lava_grp = pygame.sprite.Group()
+
 
 #instance world
+if path.exists(f'map{num}.pickle'):
+	pickle_in = open(f'map{num}.pickle', 'rb')
+	world_data = pickle.load(pickle_in)
+
 world = World(world_data)
 
 
@@ -105,8 +155,9 @@ class Player():
 		self.jump = False
 		self.direct = 0
 		self.check_jump = 0
+		
 
-	def update(self):
+	def update(self,game_over):
 		dx = 0  
 		dy = 0
 		walk_col = 15
@@ -125,6 +176,7 @@ class Player():
 
 
 		if keyPress[pygame.K_SPACE] and self.jump == False and self.check_jump == 0:
+			sJump.play()
 			self.vel_y = -15 #2,5 ô top 455 - jump(335) = 120 / 40 (1 ô) = >> 2,5 ô , tính từ recttop
 			self.jump = True
 			self.check_jump = 1
@@ -167,7 +219,10 @@ class Player():
 
 		dy += self.vel_y
 
+
+
 		#check for collision
+	
 		for tile in world.tile_list:
 
 			#check x 
@@ -185,6 +240,14 @@ class Player():
 					self.vel_y = 0
 				#Khi nào có va chạm xong chạm vật mới tiếp tục nhảy tiếp
 				self.check_jump = 0
+
+		
+		if pygame.sprite.spritecollide(self,key_grp,True):
+			sCoin.play()
+			
+		#check for collision with exit
+		if pygame.sprite.spritecollide(self, door_grp, False):
+			game_over = 1
 
 		#update player
 		self.rect.x += dx				
@@ -204,21 +267,64 @@ class Player():
 			self.rect.right = 800
 
 		screen.blit(self.image,self.rect)
-		pygame.draw.rect(screen,(0,0,0),self.rect,2)
+		return game_over
+
+	def reset(self,x,y):
+		self.images_right = []
+		self.images_left = []
+		self.index = 0
+		self.count = 0
+		for num in range(1,5):  
+			img = pygame.image.load(f"image/guy{num}.png")
+			img_r = pygame.transform.scale(img,(40,80))
+			img_l = pygame.transform.flip(img_r,True,False)
+			self.images_right.append(img_r)
+			self.images_left.append(img_l)
+		
+		self.image = self.images_right[self.index]
+		self.rect = self.image.get_rect()
+		self.width = self.image.get_width()
+		self.height = self.image.get_height()
+		self.rect.x = x
+		self.rect.y = y
+		self.vel_y = 0
+		self.jump = False
+		self.direct = 0
+		self.check_jump = 0
+		
 		
 
 #instance player
 player = Player(tile_size*2,screen_height-(tile_size*4))
 
+
+
 #Main
 run = True
 while run:
 	fpsclock.tick(FPS)
-	screen.blit(bGround1,(0,0))
-	draw_layout()
+	#draw_layout()
+	#pygame.draw.line(screen,(0,0,0),(0,520),(800,520))
+
+	if num == 1:
+		screen.blit(bGround1,(0,0))
+	if num ==2:
+		screen.blit(bGround2,(0,0))
+	
 	world.drawWorld()
-	player.update()
-	pygame.draw.line(screen,(0,0,0),(0,520),(800,520))
+	game_over = player.update(game_over)
+	door_grp.draw(screen)
+	key_grp.draw(screen)
+	lava_grp.draw(screen)
+	
+
+	if game_over == 1:
+		num += 1
+		if num <= max_num:
+			world = next_map(num)
+			game_over = 0
+
+	
 	for event in pygame.event.get():
 		if event.type == pygame.QUIT:
 			run = False
@@ -226,3 +332,5 @@ while run:
 	
 
 pygame.quit()
+
+# load map là vấn đề gặp phải
