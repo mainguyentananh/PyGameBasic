@@ -8,16 +8,19 @@ pygame.mixer.pre_init(44100,-16,2,512)
 mixer.init()
 pygame.init()
 
+BLUE = (0 ,0 , 255)
+
+
 #define map
 num = 1
-max_num = 4
+max_num = 3
 
 #define door and state game
 game_over = 0
 oDoor = 0
 
 #define menu
-main_menu = True
+main_menu = -1
 
 #FPS
 fpsclock = pygame.time.Clock()
@@ -36,9 +39,9 @@ pygame.mixer.music.play(-1,0,5000)
 bGround1 = pygame.image.load("image/bg1.png")
 bGround2 = pygame.image.load("image/bg2.png")
 bGround3 = pygame.image.load("image/bg3.png")
-start = pygame.image.load("image/start.png")
-restart = pygame.image.load("image/restart.png")
-
+start_img = pygame.image.load("image/start.png")
+restart_img = pygame.image.load("image/restart.png")
+win = pygame.image.load("image/win.jpg")
 
 #load sound
 sJump = pygame.mixer.Sound("sound/jump.wav")
@@ -52,6 +55,8 @@ sDead.set_volume(0.5)
 
 sNext = pygame.mixer.Sound("sound/next_map.wav")
 sNext.set_volume(0.5)
+
+
 
 tile_size = 40
 
@@ -389,8 +394,13 @@ class Button():
 
 		return action
 
-start_button = Button((screen_width / 2) - 40, (screen_height / 2) - 120, start)
-restart_button = Button((screen_width / 2) - 40, (screen_height / 2) - 120, restart)
+start_button = Button((screen_width / 2) - 40, (screen_height / 2) - 120, start_img)
+restart_button = Button((screen_width / 2) - 40, (screen_height / 2) - 120, restart_img)
+
+#Text Win
+font = pygame.font.Font("OpenSans-Bold.ttf",40)
+text = font.render("PHÁ ĐẢO",True,BLUE)
+
 
 #Main
 run = True
@@ -406,12 +416,12 @@ while run:
 	
 	world.drawWorld()
 
-	if main_menu == True:
+	if main_menu == -1:
 		if start_button.draw():
-			main_menu = False
+			main_menu = 0
 			pygame.mixer.music.stop()
 
-	else:
+	if main_menu == 0:
 		game_over = player.update(game_over)
 		oDoor = player.oDoor(oDoor)
 		
@@ -435,6 +445,16 @@ while run:
 			if num <= max_num:
 				world = next_map(num)
 				game_over = 0
+			else:
+				main_menu = 1
+			oDoor = 0
+	if main_menu == 1:
+		screen.blit(win,(0,0))
+		screen.blit(text,((screen_width / 2) - 60, (screen_height / 2) - 200))
+		if restart_button.draw():
+			num = 1
+			world = next_map(num)
+			game_over = 0
 			oDoor = 0
 
 	#draw_layout()
