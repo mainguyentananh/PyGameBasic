@@ -66,6 +66,7 @@ def next_map(num):
 	key_grp.empty()
 	door_grp.empty()
 	lava_grp.empty()
+	enemy_grp.empty()
 
 	#load in level data and create world
 	if path.exists(f'map{num}.pickle'):
