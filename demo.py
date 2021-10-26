@@ -10,7 +10,7 @@ pygame.init()
 
 #define map
 num = 1
-max_num = 3
+max_num = 4
 
 #define door and state game
 game_over = 0
@@ -57,7 +57,7 @@ tile_size = 40
 
 
 def next_map(num):
-	player.reset(tile_size, screen_height-(tile_size*4))
+	player.reset(tile_size, screen_height/2)
 	key_grp.empty()
 	door_grp.empty()
 	lava_grp.empty()
@@ -103,6 +103,9 @@ class World():
 				if tile == 4:
 					lava = Lava(col_count * tile_size,row_count * tile_size)
 					lava_grp.add(lava)
+				if tile == 5:
+					enemy = Enemy(col_count * tile_size,row_count * tile_size)
+					enemy_grp.add(enemy)
 				col_count+=1
 			row_count+=1
 
@@ -138,10 +141,33 @@ class Lava(pygame.sprite.Sprite):
 		self.rect.x = x
 		self.rect.y = y
 
+class Enemy(pygame.sprite.Sprite):
+	def __init__(self, x, y):
+		pygame.sprite.Sprite.__init__(self)
+		img = pygame.image.load('image/enemy.png')
+		self.image = pygame.transform.scale(img,(50,50))
+		self.rect = self.image.get_rect()
+		self.rect.x = x
+		self.rect.y = y
+		self.move_direction = 1
+		self.move_counter = 0
+
+	def update(self):
+		self.rect.x += self.move_direction
+		self.move_counter += 1
+		if self.move_counter > 100:
+			self.move_direction *= -1
+			self.move_counter *= -1
+			if self.move_direction < 0:
+				self.image = pygame.transform.flip(self.image,True,False)
+			else:
+				self.image = pygame.transform.flip(self.image,True,False)
+
+
 door_grp = pygame.sprite.Group()
 key_grp = pygame.sprite.Group()
 lava_grp = pygame.sprite.Group()
-
+enemy_grp = pygame.sprite.Group()
 
 #instance world
 if path.exists(f'map{num}.pickle'):
@@ -277,6 +303,10 @@ class Player():
 			sDead.play()
 
 
+		if pygame.sprite.spritecollide(self,enemy_grp,False):
+			game_over = -1
+			sDead.play()
+
 		#update player
 		self.rect.x += dx				
 		self.rect.y += dy
@@ -326,9 +356,10 @@ class Player():
 		
 
 #instance player
-player = Player(tile_size*2,screen_height-(tile_size*4))
+# player = Player(tile_size*2,screen_height-(tile_size*4))
 
-	
+player = Player(tile_size*2,screen_height/2)
+
 class Button():
 	def __init__(self, x, y, image):
 		self.image = pygame.transform.scale(image,(120,80))
@@ -389,6 +420,8 @@ while run:
 			door_grp.draw(screen)
 		key_grp.draw(screen)
 		lava_grp.draw(screen)
+		enemy_grp.draw(screen)
+		enemy_grp.update()
 		
 		if game_over == -1:
 			if restart_button.draw():
