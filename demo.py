@@ -453,6 +453,7 @@ while run:
 		screen.blit(win,(0,0))
 		screen.blit(text,((screen_width / 2) - 60, (screen_height / 2) - 200))
 		if restart_button.draw():
+			main_menu = 0
 			num = 1
 			world = next_map(num)
 			game_over = 0
